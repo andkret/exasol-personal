@@ -12,35 +12,33 @@ To explore query optimization we will use the industry-standard TPC-H benchmark 
 
 > **Note:** The download link is only valid for a short period (less than 24 hours). Make sure to download the source code as soon as you receive the email.
 
-### Step 2: Generate the Dataset
+### Step 2: Compile and Generate the Dataset
 
-Once you have the source code, we will use it to generate the 100 GB dataset locally and load it into Exasol.
+Log into the AWS EC2 instance via the AWS Console (go to EC2 > Instances > Connect), then install the required build tools and generate the raw `.tbl` data files:
 
-## Adding a Quarter Column
-
-To add a `quarter` column with random values between 1 and 4:
-
-```sql
-ALTER TABLE your_table ADD COLUMN quarter INT;
-
-UPDATE your_table
-SET quarter = FLOOR(RAND() * 4) + 1;
+```bash
+sudo apt update
+sudo apt install build-essential -y
+cd tpch-kit/dbgen
+./dbgen -s 10
+ls -lh *.tbl
+df -h
 ```
 
-- log  into the AWS instance using the UI (go to instances and do connect)
+### Step 3: Convert .tbl Files to Parquet
 
-- sudo apt update
-- sudo apt install build-essential -y
-- cd tpch-kit/dbgen
-- ./dbgen -s 10
-- ls -lh *.tbl
-- df -h
-- sudo apt install python3 python3-pip python3-venv -y
-- python3 -m venv tpch-env
-- source tpch-env/bin/activate
-- pip install duckdb pandas pyarrow
-- nano convert_to_parquet.py
+Install Python and the required libraries, then create the conversion script:
 
+```bash
+sudo apt install python3 python3-pip python3-venv -y
+python3 -m venv tpch-env
+source tpch-env/bin/activate
+pip install duckdb pandas pyarrow
+```
+
+Create a file called `convert_to_parquet.py` with the following content. This script reads each `.tbl` file, converts it to Parquet, and for the `lineitem` table additionally adds two columns: `quarter_rand` (a random quarter 1–4) and `hotspot_key` (a skewed key used to simulate bad data distribution — 95% of rows get value 1):
+
+```python
 import duckdb
 import os
 
@@ -114,39 +112,77 @@ for table in tables:
     con.execute(f"DROP TABLE {table};")
 
 print("Done.")
+```
 
+Run the script:
 
-- python3 convert_to_parquet.py
+```bash
+python3 convert_to_parquet.py
+```
 
+### Step 4: Upload Parquet Files to S3
 
-- aws s3 cp parquet/lineitem \
-  s3://exasol-personal-data/lineitems/ \
-  --recursive
+Install the AWS CLI, configure it with your IAM user credentials, and upload the lineitem parquet files:
 
-- sudo apt install awscli -y
+```bash
+sudo apt install awscli -y
+aws configure
+```
 
-- aws configure (use keys for your user)
-
-- aws s3 cp parquet/lineitem \
+```bash
+aws s3 cp parquet/lineitem \
   s3://your-bucket/lineitems/ \
   --recursive
+```
 
-- cleanup rm -rf parquet 
+Clean up the generated files from the instance to free up disk space:
+
+```bash
+rm -rf parquet
 rm -f *.tbl
+```
 
-## stop your cluster and create a new one with 4 nodes
+---
 
-- exasol stop
-- cd ..
-- md 4-node-cluster
-- exasol install aws --cluster-size 4
+## Cluster Scaling — Import Performance Comparison
 
-- log back in with dbvisualizer using the information shown
+Using the 120 million row lineitem dataset, we can clearly see the performance benefit of adding more nodes to the cluster.
 
-## Create the bad table and query it
+**Single-node cluster:**
 
-- in exasol create table: 
+![Import on single node cluster](../Script_Images/2_2/Import-single-node-cluster.png)
 
+**4-node cluster:**
+
+![Import on 4-node cluster](../Script_Images/2_2/Import-4-node-cluser.png)
+
+The results show a significant reduction in import time when scaling from 1 to 4 nodes. Exasol distributes the workload across all nodes in parallel, so adding nodes directly translates into faster data ingestion.
+
+---
+
+## Distribution Key Demo
+
+To demonstrate how distribution keys affect query performance, we set up a 4-node cluster and compare a poorly distributed table against a well distributed one.
+
+### Step 1: Create a 4-Node Cluster
+
+Stop the current single-node cluster and create a new 4-node deployment:
+
+```bash
+exasol stop
+cd ..
+mkdir 4-node-cluster
+cd 4-node-cluster
+exasol install aws --cluster-size 4
+```
+
+Log back into DbVisualizer using the connection details shown after the install completes.
+
+### Step 2: Create the Badly Distributed Table
+
+This table uses `HOTSPOT_KEY` as the distribution key. Since 95% of rows have `HOTSPOT_KEY = 1`, almost all data ends up on a single node — creating a severe imbalance:
+
+```sql
 CREATE OR REPLACE TABLE LINEITEM_BAD_DIST (
     L_ORDERKEY      DECIMAL(18,0),
     L_PARTKEY       DECIMAL(18,0),
@@ -168,12 +204,12 @@ CREATE OR REPLACE TABLE LINEITEM_BAD_DIST (
     HOTSPOT_KEY     DECIMAL(1,0)
 );
 
-- set the distribution key
 ALTER TABLE LINEITEM_BAD_DIST DISTRIBUTE BY HOTSPOT_KEY;
+```
 
+Import the data:
 
-- do the import
-
+```sql
 IMPORT INTO LINEITEM_BAD_DIST
 FROM PARQUET AT 'https://exasol-personal-data.s3.eu-central-1.amazonaws.com/'
 FILE 'lineitems/data_0.parquet'
@@ -186,25 +222,28 @@ FILE 'lineitems/data_6.parquet'
 FILE 'lineitems/data_7.parquet'
 FILE 'lineitems/data_8.parquet'
 FILE 'lineitems/data_9.parquet';
+```
 
-- show the distribution on the nodes
+Check the data distribution across nodes — you should see a severe imbalance:
 
+```sql
 SELECT
     IPROC() AS NODE_ID,
     COUNT(*) AS ROWS_ON_NODE
 FROM LINEITEM_BAD_DIST
 GROUP BY IPROC()
 ORDER BY IPROC();
+```
 
+Run a simple count and a heavy aggregation query to measure performance:
 
-- Do a count
-
+```sql
 SELECT COUNT(*)
 FROM LINEITEM_BAD_DIST
 WHERE HOTSPOT_KEY = 1;
+```
 
-- Do a heavy query
-
+```sql
 SELECT
     L_PARTKEY,
     L_SUPPKEY,
@@ -217,12 +256,13 @@ GROUP BY
     L_PARTKEY,
     L_SUPPKEY
 LIMIT 100;
+```
 
+### Step 3: Create the Well Distributed Table
 
-## upload the good dataset
+This table uses `L_ORDERKEY` as the distribution key. Since order keys are unique and evenly spread, rows are distributed uniformly across all nodes:
 
-- create table
-
+```sql
 CREATE OR REPLACE TABLE LINEITEM_GOOD_DIST (
     L_ORDERKEY      DECIMAL(18,0),
     L_PARTKEY       DECIMAL(18,0),
@@ -244,13 +284,12 @@ CREATE OR REPLACE TABLE LINEITEM_GOOD_DIST (
     HOTSPOT_KEY     DECIMAL(1,0)
 );
 
-- set distribution key
-
 ALTER TABLE LINEITEM_GOOD_DIST DISTRIBUTE BY L_ORDERKEY;
+```
 
+Import the data:
 
-- import data
-
+```sql
 IMPORT INTO LINEITEM_GOOD_DIST
 FROM PARQUET AT 'https://exasol-personal-data.s3.eu-central-1.amazonaws.com/'
 FILE 'lineitems/data_0.parquet'
@@ -263,18 +302,22 @@ FILE 'lineitems/data_6.parquet'
 FILE 'lineitems/data_7.parquet'
 FILE 'lineitems/data_8.parquet'
 FILE 'lineitems/data_9.parquet';
+```
 
-- compare the distribution
+Check the distribution — rows should be spread evenly this time:
 
+```sql
 SELECT
     IPROC() AS NODE_ID,
     COUNT(*) AS ROWS_ON_NODE
 FROM LINEITEM_GOOD_DIST
 GROUP BY IPROC()
 ORDER BY IPROC();
+```
 
-- run our heavy query again and compare
+Run the same heavy query and compare the execution time against the badly distributed table:
 
+```sql
 SELECT
     L_PARTKEY,
     L_SUPPKEY,
@@ -292,23 +335,4 @@ GROUP BY
     L_SHIPMODE,
     L_RETURNFLAG
 LIMIT 100;
-
-## Cluster Scaling — Import Performance Comparison
-
-Using the 120 million row lineitem dataset, we can clearly see the performance benefit of adding more nodes to the cluster.
-
-**Single-node cluster:**
-
-![Import on single node cluster](../Script_Images/2_2/Import-single-node-cluster.png)
-
-**4-node cluster:**
-
-![Import on 4-node cluster](../Script_Images/2_2/Import-4-node-cluser.png)
-
-The results show a significant reduction in import time when scaling from 1 to 4 nodes. Exasol distributes the workload across all nodes in parallel, so adding nodes directly translates into faster data ingestion.
-
-
-
-
-
-
+```
