@@ -38,8 +38,4 @@ Exasol can also be used alongside an existing data warehouse as a query accelera
 
 ![Exasol Accelerator](../Script_Images/1_1/Exasol-Accelerator.png)
 
-## Hardware Setup
 
-Exasol Personal runs on AWS EC2 instances. The hardware setup determines cluster capacity and performance.
-
-![Hardware Setup](../Script_Images/1_1/Hardware-setup.png)
