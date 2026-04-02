@@ -2,6 +2,10 @@
 
 This lesson demonstrates how to create and use a Python UDF (User Defined Function) in Exasol. The UDF takes a stock symbol as input and queries the Financial Modeling Prep API to return company information.
 
+![UDF Example](../Script_Images/3_1/UDF-example.png)
+
+![UDF Container](../Script_Images/3_1/UDF-container.png)
+
 ## Step 1: Create the Companies Table
 
 Create a table to store the stock symbols you want to look up:
