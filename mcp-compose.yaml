@@ -1,0 +1,61 @@
+
+networks:
+  exasol:
+    driver: bridge
+
+services:
+
+  mcp:
+    image: exasol-mcp-server-governed-sql
+    container_name: mcpserver
+    hostname: mcpserver
+    restart: unless-stopped
+    environment:
+      # EXA_MCP_SETTINGS: "/app/mcp_settings.json"
+      EXA_MCP_LOGGER: "True"
+      EXA_MCP_LOGGER_MODE: "DEBUG"
+      EXA_MCP_LOGGER_FILE: "/app/logs/mcp_server.log"
+      EXA_MCP_LOG_LEVEL: ""
+      EXA_MCP_LOG_TO_CONSOLE: "false"
+      EXA_DSN: "<Your Exasol Database Server:8563"
+      EXA_USER: "<Your Exasol Database Username>"
+      EXA_PASSWORD: "<Your Exasol Database Username>"
+      EXA_MCP_LLM_SERVER_URL: "http://host.docker.internal:1234/v1"   ## for local LM-Studio
+      EXA_MCP_LLM_SERVER_API_KEY: ""
+      EXA_MCP_LLM_TRANSFORMATION: "qwen3-coder:30b"
+      EXA_MCP_LLM_RENDERING: "qwen3-coder:30b"
+      EXA_MCP_LLM_TEMPERATURE_RELEVANCE: "0.0"
+      EXA_MCP_LLM_TEMPERATURE_TRANSLATION: "0.0"
+      EXA_MCP_LLM_TEMPERATURE_QUERY_REWRITE: "0.4"
+      EXA_MCP_LLM_TEMPERATURE_RENDERING: "0.0"
+      EXA_MCP_LLM_TEMPERATURE_INFO: "0.7"
+      EXA_MCP_VECTORDB_FILE: "/data/vectordb/vectordb.json"
+      EXA_MCP_VECTORDB_SIMILARITY_DISTANCE: "0.3"
+    ports:
+      - "9100:9100"
+    volumes:
+      - ./mcp_server/data/vectordb:/data/vectordb
+      - ./mcp_server/logs:/app/logs
+      - /etc/localtime:/etc/localtime:ro
+    networks:
+      - exasol
+
+  openwebui:
+    image: ghcr.io/open-webui/open-webui:latest
+    container_name: open-webui
+    hostname: openwebui
+    volumes:
+      - ./open-webui:/app/backend/data
+      - ./open-webui/custom.css:/app/build/static/custom.css
+    ports:
+      - "3000:8080"
+    environment:
+      WEBUI_URL: "http://host.docker.internal:3000"
+      GLOBAL_LOG_LEVEL: "DEBUG"
+    restart: unless-stopped
+    networks:
+      - exasol
+
+
+
+
