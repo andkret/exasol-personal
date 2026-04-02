@@ -59,6 +59,7 @@ def run(ctx):
             exchange         = item.get("exchange")
 
             ctx.emit(symbol, name, currency, exchangeFullName, exchange)
+/
 ```
 
 The UDF runs with the standard Exasol Script Language Container — no custom container needed.

@@ -59,23 +59,3 @@ In practice this means small lookup tables (e.g. dimension tables, reference dat
 
 ---
 
-## Query Writing Best Practices
-
-Having the right keys set up is only half the story — how you write your queries also directly affects performance.
-
-**Avoid:**
-
-- **ORDER BY in views and subqueries** — only sort in the outermost final SELECT. Sorting inside subqueries forces materialisation and kills parallelism
-- **UNION instead of UNION ALL** — UNION removes duplicates which requires an extra pass over the data. Use UNION ALL unless you explicitly need deduplication
-- **Joining columns of different data types** — e.g. joining an INT to a VARCHAR triggers implicit type conversion and prevents efficient local joins
-- **Oversized data types** — avoid VARCHAR(2000000) or DECIMAL(32,x) when much smaller types are sufficient. Oversized types hurt compression and memory usage
-- **Distributing on WHERE clause columns** — this disables MPP for filtered queries and forces global joins
-
-**Do:**
-
-- **Distribute large tables on join columns** — both tables distributed on the same join column means the join happens locally on each node with no network traffic
-- **Use exact, compact data types** — smaller types compress better and process faster
-- **Use DECIMAL over DOUBLE for financial data** — DOUBLE is approximate; DECIMAL is exact
-- **Filter on partition key columns in WHERE clauses** — this allows Exasol to skip entire partitions and scan only the relevant data
-
-**Reference:** [Exasol Performance Best Practices](https://docs.exasol.com/db/latest/performance/best_practices.htm)
