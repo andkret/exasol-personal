@@ -33,7 +33,7 @@ The following Python3 UDF takes a stock symbol, calls the Financial Modeling Pre
 > **Note:** Replace the `apikey` value with your own API key from [financialmodelingprep.com](https://financialmodelingprep.com).
 
 ```sql
-CREATE OR REPLACE PYTHON3 SCALAR SCRIPT "EXASOL_DIB"."GET_STOCK_INFO"(SYMBOL VARCHAR(32))
+CREATE OR REPLACE PYTHON3 SCALAR SCRIPT "LINEITEMS"."GET_STOCK_INFO"(SYMBOL VARCHAR(32))
 EMITS (
     SYMBOL           VARCHAR(32),
     NAME             VARCHAR(64),
