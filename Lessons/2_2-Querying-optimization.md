@@ -6,20 +6,39 @@ To explore query optimization we will use the industry-standard TPC-H benchmark 
 
 ### Step 1: Download the TPC-H Source Code
 
+You have two options for getting the TPC-H source code onto the EC2 instance. Pick whichever you prefer.
+
+#### Option 1 — Official TPC-H Source Code
+
 1. Go to the [TPC-H Specification page](https://www.tpc.org/tpc_documents_current_versions/current_specifications5.asp)
 2. Fill in the required information to request the download
 3. You will receive an email with a download link
 
 > **Note:** The download link is only valid for a short period (less than 24 hours). Make sure to download the source code as soon as you receive the email.
 
+Once downloaded to your local machine, upload it to the EC2 instance with `scp` (replace the key path, archive name, and public IP with your own):
+
+```bash
+scp -i your-key.pem tpc-h-tool.zip ubuntu@<your-ec2-public-ip>:~/
+```
+
+#### Option 2 — Pre-modified `tpch-kit` from GitHub (the version used here)
+
+A lightly modified, ready-to-build version of TPC-H is hosted on GitHub. This is the option used for this lesson. SSH into the EC2 instance and clone the repo:
+
+```bash
+git clone https://github.com/gregrahn/tpch-kit.git
+```
+
 ### Step 2: Compile and Generate the Dataset
 
-Log into the AWS EC2 instance via the AWS Console (go to EC2 > Instances > Connect), then install the required build tools and generate the raw `.tbl` data files:
+Log into the AWS EC2 instance via the AWS Console (go to EC2 > Instances > Connect), then install the required build tools, compile `dbgen`, and generate the raw `.tbl` data files:
 
 ```bash
 sudo apt update
-sudo apt install build-essential -y
+sudo apt install git make gcc -y
 cd tpch-kit/dbgen
+make MACHINE=LINUX DATABASE=POSTGRESQL
 ./dbgen -s 10
 ls -lh *.tbl
 df -h
