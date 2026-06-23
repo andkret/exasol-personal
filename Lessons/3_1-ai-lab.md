@@ -5,7 +5,7 @@
 AI-LAB Docker: https://github.com/exasol/ai-lab
 
 ```bash
-docker run --publish 0.0.0.0:49494:49494 exasol/ai-lab
+docker run --publish 0.0.0.0:49494:49494 exasol/ai-lab:4.0.0
 ```
 
 Username is `ailab`
