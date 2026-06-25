@@ -1,1 +1,1 @@
-![MCP Process](../Script_Images/4_3/MCP-process.png)
+![MCP Process](../Script_Images/4_1/MCP-process.png)

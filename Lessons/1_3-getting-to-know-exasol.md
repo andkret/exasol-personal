@@ -103,4 +103,4 @@ IMPORT INTO yellow_taxi_trips
 
 This imports approximately 48.7 million rows (~1 GB) from a single parquet file. On a single-node r6i.xlarge instance, the import takes about 35 seconds.
 
-![Import example output](../Script_Images/1_3/import_example_output.png)
+![Import example output](../Script_Images/1_3/yellow_cab_import.png)

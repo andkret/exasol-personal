@@ -1,4 +1,4 @@
-![AI Lab Hugging Face](../Script_Images/4_1/AI-lab-hugging-face.png)
+![AI Lab Hugging Face](../Script_Images/3_1/AI-lab-hugging-face.png)
 
 # start AI Lab. 
 
@@ -14,7 +14,7 @@ Username is `ailab`
 
 This is the first time in this course we use BucketFS. The AI Lab uses BucketFS to store model files and other assets directly on the Exasol cluster, making them accessible to UDFs and scripts running inside the database.
 
-![BucketFS](../Script_Images/4_1/bucketfs.png)
+![BucketFS](../Script_Images/3_1/bucketfs.png)
 
 For the AIlab configuration we need to configure bucketfs passwords for read and write.
 
