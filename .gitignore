@@ -1,2 +1,7 @@
 yellow_cab/
 yellow_*
+
+# but always keep lesson screenshots
+!Script_Images/**
+
+.DS_Store
