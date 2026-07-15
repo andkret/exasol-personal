@@ -30,7 +30,14 @@ INSERT INTO COMPANIES VALUES (3, 'LMT');
 
 The following Python3 UDF takes a stock symbol, calls the Financial Modeling Prep API, and emits one row per matching result with the symbol name, currency, and exchange information.
 
+First create a connection to keep the url and password that you use in the UDF secret
+```sql
+CREATE CONNECTION FMP_KEY TO 'https://financialmodelingprep.com/stable/search-symbol' IDENTIFIED BY '<your-api-key>';
+```
+
 > **Note:** Replace the `apikey` value with your own API key from [financialmodelingprep.com](https://financialmodelingprep.com).
+
+Then create the UDF
 
 ```sql
 CREATE OR REPLACE PYTHON3 SCALAR SCRIPT "LINEITEMS"."GET_STOCK_INFO"(SYMBOL VARCHAR(32))
@@ -44,10 +51,10 @@ EMITS (
 import requests
 
 def run(ctx):
-    url = "https://financialmodelingprep.com/stable/search-symbol"
+    url = exa.get_connection("FMP_KEY").address
     params = {
         "query": ctx.SYMBOL,
-        "apikey": "<your-api-key>"
+        "apikey": exa.get_connection("FMP_KEY").password
     }
 
     response = requests.get(url, params=params)
