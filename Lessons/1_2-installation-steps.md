@@ -36,7 +36,7 @@
 
 1. Download the Exasol Launcher:
    ```bash
-   curl https://downloads.exasol.com/exasol-personal/installer.sh | sh
+   curl https://www.exasol.com/install/ | bash
    ```
    Alternatively, download from the [Exasol Download Portal](https://downloads.exasol.com) and add the `exasol` binary to your PATH.
 
