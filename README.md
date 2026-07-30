@@ -1,4 +1,10 @@
-# Exasol Personal
+# High-Performance Data Analysis with Exasol
+
+Learn how to run machine learning and AI directly inside [Exasol](https://www.exasol.com/personal/), the massively parallel processing (MPP) analytical database, keeping your data and compute on your own infrastructure instead of external cloud ML platforms. This hands-on lab covers MPP architecture, deploying Exasol on AWS, query optimization with distribution and partition keys, running Python scripts directly in the database with UDFs, in-database scikit-learn and Hugging Face models, and building a conversational interface with the Model Context Protocol (MCP) and local LLMs.
+
+Built for data engineers, data scientists, and AI engineers. No prior Exasol experience required.
+
+👉 **Take the free course:** [High-Performance Data Analysis with Exasol](https://learndataengineering.com/p/high-performance-data-analysis-with-exasol)
 
 ## Lessons
 
